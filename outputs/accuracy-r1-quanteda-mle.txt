@@ -1,0 +1,2 @@
+r1-quanteda-mle | top-10 accuracy: 47.7%
+r1-quanteda-mle | pos accuracy: 55.4%

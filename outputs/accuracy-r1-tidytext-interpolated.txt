@@ -1,0 +1,2 @@
+r1-tidytext-interpolated | top-10 accuracy: 46.7%
+r1-tidytext-interpolated | pos accuracy: 54.5%

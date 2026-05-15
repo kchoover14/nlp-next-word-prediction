@@ -1,0 +1,2 @@
+r1-tidytext-stupid | top-10 accuracy: 50.8%
+r1-tidytext-stupid | pos accuracy: 56.7%

@@ -1,0 +1,2 @@
+r1-tidytext-mle | top-10 accuracy: 48.6%
+r1-tidytext-mle | pos accuracy: 56.9%

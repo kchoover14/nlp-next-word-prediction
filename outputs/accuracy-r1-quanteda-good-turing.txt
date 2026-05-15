@@ -1,0 +1,2 @@
+r1-quanteda-good-turing | top-10 accuracy: 26.8%
+r1-quanteda-good-turing | pos accuracy: 51.5%

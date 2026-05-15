@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.23">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Kara C. Hoover">
+
+<title>An NLP Pipeline from N-Gram Models to Deployed Shiny App to Predict the Next Word in a Sentence</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="nlp-next-word-prediction_files/libs/clipboard/clipboard.min.js"></script>
+<script src="nlp-next-word-prediction_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="nlp-next-word-prediction_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="nlp-next-word-prediction_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="nlp-next-word-prediction_files/libs/quarto-html/popper.min.js"></script>
+<script src="nlp-next-word-prediction_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="nlp-next-word-prediction_files/libs/quarto-html/anchor.min.js"></script>
+<link href="nlp-next-word-prediction_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="nlp-next-word-prediction_files/libs/quarto-html/quarto-syntax-highlighting-076ecbd647e1f0418c5051713cd9b730.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="nlp-next-word-prediction_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="nlp-next-word-prediction_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="nlp-next-word-prediction_files/libs/bootstrap/bootstrap-2ff945e08977e8cdd59abf7ee4492cef.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="blues quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#executive-summary" id="toc-executive-summary" class="nav-link active" data-scroll-target="#executive-summary">Executive Summary</a></li>
+  <li><a href="#app-features" id="toc-app-features" class="nav-link" data-scroll-target="#app-features">App Features</a>
+  <ul class="collapse">
+  <li><a href="#next-word-prediction" id="toc-next-word-prediction" class="nav-link" data-scroll-target="#next-word-prediction">Next Word Prediction</a></li>
+  <li><a href="#top-10-predictions-chart" id="toc-top-10-predictions-chart" class="nav-link" data-scroll-target="#top-10-predictions-chart">Top 10 Predictions Chart</a></li>
+  <li><a href="#metadata-table" id="toc-metadata-table" class="nav-link" data-scroll-target="#metadata-table">Metadata Table</a></li>
+  </ul></li>
+  <li><a href="#study-design" id="toc-study-design" class="nav-link" data-scroll-target="#study-design">Study Design</a>
+  <ul class="collapse">
+  <li><a href="#corpus" id="toc-corpus" class="nav-link" data-scroll-target="#corpus">Corpus</a></li>
+  <li><a href="#model-development" id="toc-model-development" class="nav-link" data-scroll-target="#model-development">Model Development</a></li>
+  <li><a href="#models-methods-and-implementations" id="toc-models-methods-and-implementations" class="nav-link" data-scroll-target="#models-methods-and-implementations">Models: Methods and Implementations</a></li>
+  <li><a href="#testing-model-accuracy-2026" id="toc-testing-model-accuracy-2026" class="nav-link" data-scroll-target="#testing-model-accuracy-2026">Testing Model Accuracy 2026</a></li>
+  </ul></li>
+  <li><a href="#project-resources" id="toc-project-resources" class="nav-link" data-scroll-target="#project-resources">Project Resources</a></li>
+  <li><a href="#tools-technologies" id="toc-tools-technologies" class="nav-link" data-scroll-target="#tools-technologies">Tools &amp; Technologies</a></li>
+  <li><a href="#expertise" id="toc-expertise" class="nav-link" data-scroll-target="#expertise">Expertise</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content page-columns page-full" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">An NLP Pipeline from N-Gram Models to Deployed Shiny App to Predict the Next Word in a Sentence</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">NLP</div>
+    <div class="quarto-category">n-gram models</div>
+    <div class="quarto-category">Shiny</div>
+    <div class="quarto-category">text mining</div>
+    <div class="quarto-category">machine learning</div>
+    <div class="quarto-category">text prediction</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Kara C. Hoover </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">July 2021</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="executive-summary" class="level2">
+<h2 class="anchored" data-anchor-id="executive-summary">Executive Summary</h2>
+<p><strong>Rationale:</strong> The goal was to build a Shiny app that predicts the next word from user text input using natural language processing techniques. The corpus used for training is the <a href="https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip">SwiftKey dataset</a>, a large English-language collection of blogs, news articles, and tweets totalling approximately 200MB and 70 million words across three sources. Multiple modeling approaches were explored across four R packages — tidytext, quanteda, text2vec, and word2vec — including Stupid Backoff, MLE, interpolated backoff, Kneser-Ney smoothing, and Good-Turing smoothing. Stupid Backoff was the best performing model in 2021 and 2026. The new app version uses an improved Stupid Backoff model and UX design.</p>
+<p><strong>App Highlights</strong></p>
+<ul>
+<li>Accepts user text input and predicts the next word using a Stupid Backoff algorithm across unigram, bigram, trigram, and quadgram lookup tables, sampled from the top results weighted by probability</li>
+<li>Displays the top 10 predicted words and their probabilities in a bar chart</li>
+<li>Provides a metadata table showing which n-gram level was matched, total possibilities in that n-gram dataset, and number of matches found</li>
+<li>Supports both Go button and Enter key to trigger predictions</li>
+</ul>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Data Availability
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The SwiftKey corpus used to train this model is not included in the repository due to licensing.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="app-features" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="app-features">App Features</h2>
+<section id="next-word-prediction" class="level3">
+<h3 class="anchored" data-anchor-id="next-word-prediction">Next Word Prediction</h3>
+<p>The app accepts a text string from the user and returns a predicted next word (<strong>Figure 1</strong>). Input is cleaned to lowercase before matching. The prediction uses a Stupid Backoff algorithm: the app first attempts to match the last three words of input against the quadgram lookup table. If no match is found it backs off to trigrams, then bigrams, then unigrams. The predicted word is sampled from the top 10 candidates at the matched n-gram level, weighted by probability, introducing variety across repeated queries while preserving the probability-based ranking. Stop words and single-character tokens are excluded from the predicted word display in the app interact.</p>
+<p><strong>Figure 1. App interface showing user input and predicted next word.</strong></p>
+<p><img src="outputs/fig-app-interface.png" class="img-fluid"> <strong>Interpretation:</strong> The prediction panel shows the most likely next word given the user input. The sidebar displays the predicted word prominently above the visualization tabs.</p>
+</section>
+<section id="top-10-predictions-chart" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="top-10-predictions-chart">Top 10 Predictions Chart</h3>
+<p>The prediction bar chart in <strong>Figure 2</strong> displays the top 10 candidate next words ranked by probability, with the number of candidates varying based on matches found at the matched n-gram level . Bars are filled using the mako palette, with higher-probability predictions shown in darker shades. Probability is calculated as the count of the matched n-gram divided by the total count of all n-grams sharing the same prefix.</p>
+<p><strong>Figure 2. Top 10 predicted next words with probability scores for different types of matches</strong></p>
+<div class="column-page">
+<div class="quarto-layout-panel" data-layout-ncol="3">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="outputs/match-single.png" class="img-fluid figure-img"></p>
+<figcaption>A) Single match</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="outputs/match-many.png" class="img-fluid figure-img"></p>
+<figcaption>B) Many matches</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="outputs/match-strong.png" class="img-fluid figure-img"></p>
+<figcaption>C) Strong match</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p><strong>Interpretation:</strong> The charts reveal how probability distributions vary across prediction contexts. A single dominant bar indicates a strong contextual match (C); a more even distribution across candidates reflects a weaker match with multiple plausible completions (B); and a single bar at 1.0 indicates exactly one match was found at that ngram level (A).</p>
+</section>
+<section id="metadata-table" class="level3">
+<h3 class="anchored" data-anchor-id="metadata-table">Metadata Table</h3>
+<p>The metadata table shows the mechanics of the prediction: which n-gram level produced the match, the total number of n-grams at that level, and the number of matches found for the user input. This transparency about the backoff process was a deliberate design choice to make the model’s behavior interpretable.</p>
+<p><strong>Figure 3. Metadata table showing prediction mechanics.</strong></p>
+<p><img src="outputs/fig-app-table.png" class="img-fluid"></p>
+<p><strong>Interpretation:</strong> When the n-gram evaluated is a quadgram and matches are high, the prediction is well-grounded in the corpus. When the model reports backing off to unigrams with zero matches, the prediction is essentially a frequency-ranked guess from the full vocabulary.</p>
+<hr>
+</section>
+</section>
+<section id="study-design" class="level2">
+<h2 class="anchored" data-anchor-id="study-design">Study Design</h2>
+<p>The original project (2021) was a capstone assignment for the Johns Hopkins Data Science Specialization on Coursera. Coming to NLP with no prior exposure, I independently learned and implemented multiple modeling approaches in R over six weeks — with no instruction on accuracy testing, I designed and built the evaluation framework from scratch. I built and tested several models before settling on a Stupid Backoff n-gram model for the deployed app. In 2026 I decided to revamp the original app using improved tools.</p>
+<section id="corpus" class="level3">
+<h3 class="anchored" data-anchor-id="corpus">Corpus</h3>
+<p>The SwiftKey dataset contains English-language text from three sources. <strong>Table 1</strong> summarizes the corpus. Text was cleaned by removing punctuation (except apostrophes), digits, URLs, and profanity. In 2021, I experimented with removing stop words but the UX was poor and I reverted to including them.</p>
+<p><strong>Table 1. SwiftKey Corpus Summary</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Source</th>
+<th>File Size (MB)</th>
+<th>Lines</th>
+<th>Words</th>
+<th>Mean Words per Line</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Blogs</td>
+<td>200.4</td>
+<td>899,288</td>
+<td>38,154,238</td>
+<td>42.4</td>
+</tr>
+<tr class="even">
+<td>News</td>
+<td>196.3</td>
+<td>77,259</td>
+<td>2,693,898</td>
+<td>34.9</td>
+</tr>
+<tr class="odd">
+<td>Twitter</td>
+<td>159.4</td>
+<td>2,360,148</td>
+<td>30,218,166</td>
+<td>12.8</td>
+</tr>
+<tr class="even">
+<td>Pooled</td>
+<td>556.1</td>
+<td>3,336,695</td>
+<td>71,066,302</td>
+<td>21.3</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="model-development" class="level3">
+<h3 class="anchored" data-anchor-id="model-development">Model Development</h3>
+<p>Building the n-gram lookup tables required substantial iterative work spanning June-July 2021. In addition to early exploration of topic-based prediction using Latent Dirichlet Allocation (LDA), other approaches were explored and deemed inappropriate. The two main ones were:</p>
+<ul>
+<li><strong>Text2Vec Model</strong>.GloVe Word Embeddings and Collocation: GloVe is a semantic similarity approach that represents words as dense vectors based on co-occurrence statistics, capturing semantic relationships rather than word sequences. The advantage is rich semantic representation — words with similar meanings cluster in vector space. The limitation is fundamental to the architecture: GloVe is not a sequence model and cannot predict the next word in a sentence without additional architecture. A term co-occurrence matrix was built from a 40% sample using a skip-gram window of 5, and GloVe was fitted with rank 50 over 10 iterations. The classic Paris-France-Germany analogy test confirmed the embeddings captured semantic relationships. A collocation variant with a different vector arithmetic test was also attempted. Both variants were abandoned as unsuitable for the sequence prediction task.</li>
+<li><strong>Word2Vec Model</strong>. CBOW and Skipgram: Word2Vec produces dense word embeddings that capture semantic relationships in both continuous bag-of-words and skipgram variants. Like GloVe, the strength is semantic representation — the embeddings reflect meaningful word relationships. The limitation is the same: Word2Vec is not a sequence model, and nearest-neighbor predictions using cosine similarity produce semantically related words rather than contextually likely next words. Both CBOW and skipgram models were trained on the 90% training split. Both were abandoned as unsuitable for sequence prediction.</li>
+</ul>
+<p>Forty percent of each SwiftKey dataset was subsampled and then combined into a single corpus. Quanteda and tidytext were used for corpus processing and trimming (filter by count or coverage). App data were generated with and without stopwords. Trimming by coverage and retaining stopwords resulted in better UX and the final implementaions were tested for accuracy to assess whether the top-1 predicted word matched the target word using quadgram data as the test set. Stupid Backoff achieved 14.21% top-1 accuracy when predicting the <strong>exact word</strong>, not probable matches. Updated versions of original scripts for quanteda and tidytext have been consolidated and updated but any original bugs retained with annotations. These are shared in artifacts/.</p>
+<p>The 2026 project revisited the 2021 findings updating the approaches and introducing a new accuracy framework. An interterpolated approach was added and prior attempts at MLE were debugged. As with the 2021 project, 40% of the individual source files were sampled then joined. An additional 10% was subsampled from each source dataset to use as a test set for accuracy testing. The accuracy metric was expanded to top-10 and part-of-speech (POS) accuracy via udpipe. New accuracy metrics thus evaluated whether the correct word appeared in the top 10 candidates and whether the predicted word was grammatically appropriate.</p>
+<p>Tidytext Stupid Backoff and Interpolated Backoff performed nearly equally, but the interpolated model consistently favored specific high-frequency words, resulting in poor UX. Stupid Backoff was confirmed as the final model. The app was redesigned with a modernized interface using bslib, a revised metadata table, weighted probability sampling for the predicted word, and Enter key support.</p>
+</section>
+<section id="models-methods-and-implementations" class="level3">
+<h3 class="anchored" data-anchor-id="models-methods-and-implementations">Models: Methods and Implementations</h3>
+<p><strong>tidytext Models</strong>. Stupid Backoff (2021 and 2026 winner): Stupid Backoff matches the input against the highest-order ngram available, backs off through lower orders if no match is found, and falls back to top unigrams as a last resort. No smoothing is applied — relative frequencies are used directly. The approach is simple, fast, and reliable, making it well suited to a Shiny deployment with memory and speed constraints. The primary limitation is that it assigns no probability to unseen ngrams and applies no discounting to redistribute probability mass. The tidytext implementation used unnest_tokens, a 90% cumulative coverage filter, and separated word columns keyed for fast lookup.</p>
+<p>Maximum Likelihood Estimation (MLE): MLE computes the probability of a word given its preceding context as a relative frequency — the count of the ngram divided by the count of the preceding context. No smoothing or discounting is applied. MLE is transparent, fast, and easy to implement. The primary limitation is brittleness on unseen ngrams: any input absent from the training data returns zero probability with no recovery beyond dropping to a lower ngram order. The tidytext implementation followed the same pipeline as Stupid Backoff — unnest_tokens, 90% coverage filter, separated word columns — with probability computed as n divided by the sum of n within each preceding context group.</p>
+<p>Interpolated Backoff: Interpolated backoff combines probability estimates across all ngram levels rather than committing to the highest-order match and backing off only on failure. The final probability for a predicted word is a weighted sum of its quadgram, trigram, bigram, and unigram probabilities, with lambda weights that sum to one. This smooths over sparse data at higher ngram levels by always incorporating lower-order evidence, making it more robust than Stupid Backoff or MLE when training data is sparse. The cost is additional computation relative to the simpler approaches. The tidytext implementation used the same 90% coverage-filtered ngram data, computing interpolated probabilities across all four levels and returning the top candidates by combined score.</p>
+<p><strong>Quanteda Models</strong> Simple MLE Backoff: Maximum likelihood estimation with a simple backoff strategy — match the longest possible ngram, back off to shorter ngrams if no match is found, return nothing if all levels fail. MLE is simple, fast, and interpretable. The limitation is zero probability for unseen ngrams with no smoothing to redistribute probability mass. The quanteda tokenization pipeline was used to build document-feature matrices from the training data with dfm_trim applied to reduce sparsity. The script was abandoned after data preparation — no model code was written. The decision was made to move directly to more sophisticated smoothing methods rather than reimplement MLE in a second framework.</p>
+<p>Kneser-Ney Smoothing: Kneser-Ney smoothing computes continuation probabilities — the likelihood of a word appearing in a novel context — rather than raw frequency. This makes it theoretically superior to MLE and Stupid Backoff for handling unseen ngrams, particularly for lower-order models. The standard Kneser-Ney formula with a discount value of 0.75 was implemented using a quanteda DFM pipeline. The model produced mathematically sound probability estimates but failed in practice due to an incompatibility between quanteda’s underscore separator in its internal token representation and the space-separated format required by the prediction functions. Errors in the backoff and binding functions prevented successful deployment.</p>
+<p>Good-Turing Smoothing with Katz Backoff: Good-Turing smoothing re-estimates the probability of unseen ngrams by reallocating probability mass from observed ngrams based on the frequency of frequencies. Combined with Katz backoff, which applies an alpha normalization factor, the approach is theoretically well suited to handling sparse data and novel word sequences. The implementation built a quanteda DFM pipeline, fitted log-linear regression models to estimate smoothed counts, and implemented the full Katz backoff chain from trigrams through unigrams. The July iteration produced output but returned only the same five words for any input — a symptom of the alpha normalization factor collapsing to a constant, likely caused by the quanteda underscore separator issue. Multiple iterations (originally labeled model3, 4a, and 4b) were attempted with minor data preparation differences; none resolved the core issue.</p>
+<p><strong>A note on transformer and LSTM approaches:</strong> Contextual language models such as GPT-2 and BERT existed in 2021 and would in principle address the semantic limitations of ngram approaches. However, practical access in R was limited: the keras and tensorflow packages provided an R interface to LSTM sequence models, and this was explored, but the implementation complexity for a sequence model on a 70-million-word corpus was out of scope for a capstone assignment. HuggingFace transformer inference in R was experimental at the time and not production-ready. The text package, which now wraps HuggingFace models cleanly, was in early development. The ngram approach was the correct practical choice given the assignment constraints and the R ecosystem in 2021. The semantic ceiling of the deployed app — predicting grammatically plausible but not always contextually precise words — is an inherent limitation of frequency-based ngram models rather than a failure of implementation.</p>
+</section>
+<section id="testing-model-accuracy-2026" class="level3">
+<h3 class="anchored" data-anchor-id="testing-model-accuracy-2026">Testing Model Accuracy 2026</h3>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Accuracy Testing Reminder
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The accuracy testing methods in 2021 were for exact prediction. In 2026, top-10 and POS were used. The values do not reflect genuine gain in model performance.</p>
+</div>
+</div>
+<p>Three tidytext variants were tested — MLE backoff, Stupid Backoff, and interpolated backoff — alongside the quanteda, text2vec, and word2vec implementations. Accuracy was evaluated using two measures: top-10 prediction accuracy and POS to assess whether the top-1 predicted word matched the part-of-speech of the target word via udpipe. <strong>Table 2</strong> summarizes accuracy across all models. All three tidytext models dominate on both metrics. Stupid Backoff ranks highest on top-10 accuracy and is tied with MLE for POS accuracy – but POS accuracy tended to be above 50% in all models except Quanteda Kneser-New. Kneser-Ney’s POS accuracy (37.3%) notably exceeds its top-10 accuracy (9%), indicating it predicts the right kind of word even when missing the exact word. <strong>Tidytext Stupid Backoff is confirmed as the final model</strong> — consistent with the original 2021 finding</p>
+<p><strong>Table 2. Model Accuracy — Ranked by Top-10 Values</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Framework</th>
+<th>Model</th>
+<th>Top-10 Accuracy</th>
+<th>POS Accuracy</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>tidytext</td>
+<td>Stupid Backoff</td>
+<td>50.8%</td>
+<td>56.7%</td>
+</tr>
+<tr class="even">
+<td>tidytext</td>
+<td>MLE</td>
+<td>48.6%</td>
+<td>56.9%</td>
+</tr>
+<tr class="odd">
+<td>tidytext</td>
+<td>Interpolated</td>
+<td>46.7%</td>
+<td>54.5%</td>
+</tr>
+<tr class="even">
+<td>quanteda</td>
+<td>MLE</td>
+<td>47.7%</td>
+<td>55.4%</td>
+</tr>
+<tr class="odd">
+<td>quanteda</td>
+<td>Good-Turing</td>
+<td>26.8%</td>
+<td>51.5%</td>
+</tr>
+<tr class="even">
+<td>quanteda</td>
+<td>Kneser-Ney</td>
+<td>6.4%</td>
+<td>41.3%</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="project-resources" class="level2">
+<h2 class="anchored" data-anchor-id="project-resources">Project Resources</h2>
+<p><strong>Repository:</strong> <a href="https://github.com/kchoover14/nlp-next-word-prediction">kchoover14/nlp-next-word-prediction</a></p>
+<p><strong>Live App:</strong> <a href="https://kchoover14.shinyapps.io/NextWord/">Next Word Prediction App</a></p>
+<p><strong>Data :</strong></p>
+<ul>
+<li><code>app/tidytext-*.csv</code> – n-gram lookup tables used by the deployed Shiny app</li>
+<li><code>app/app.R</code> – updated Shiny app with bslib theming, backoff chain table, mako color palette</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Data Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Data can be generated using the scripts. File sizes are too large to share on github.</p>
+</div>
+</div>
+<p><strong>Code:</strong></p>
+<p><em>Prep scripts – run before corresponding model scripts. All current scripts use stop words retained and 90/10 train/test split at line level:</em></p>
+<ul>
+<li><code>prep-corpus-sample.R</code> – corpus sampling and cleaning pipeline</li>
+<li><code>scripts/prep-r1-tidytext.R</code> – tidytext corpus pipeline</li>
+<li><code>scripts/prep-r1-quanteda.R</code> – quanteda corpus pipeline</li>
+</ul>
+<p><em>Model scripts – r1 (current):</em></p>
+<ul>
+<li><code>scripts/model-r1-tidytext-stupid.R</code> – Stupid Backoff; top-10 and POS accuracy on r1 test data</li>
+<li><code>scripts/model-r1-tidytext-mle.R</code> – MLE backoff; top-10 and POS accuracy on r1 test data</li>
+<li><code>scripts/model-r1-tidytext-interpolated.R</code> – Interpolated backoff; top-10 and POS accuracy on r1 test data</li>
+<li><code>scripts/model-r1-quanteda-mle.R</code> – quanteda MLE backoff; top-10 and POS accuracy on r1 test data</li>
+<li><code>scripts/model-r1-quanteda-good-turing.R</code> – Good-Turing + Katz backoff; top-10 and POS accuracy on r1 test data</li>
+<li><code>scripts/model-r1-quanteda-kneser-ney.R</code> – Kneser-Ney smoothing; top-10 and POS accuracy on r1 test data</li>
+<li>app.R – app script</li>
+</ul>
+<p><strong>Project Artifacts:</strong></p>
+<p><em>2021 original app and data:</em></p>
+<ul>
+<li><code>artifacts/2021-app.R</code> – original deployed Shiny app</li>
+<li><code>artifacts/2021-*.csv</code> – original ngram lookup tables (bigrams, trigrams, quadgrams, unigrams)</li>
+<li><code>artifacts/original-base-list-of-bad-words_csv-file_2021_01_18.csv</code> – profanity list used in corpus prep</li>
+<li><code>artifacts/original-model-tidytext.R</code> – tidytext Stupid Backoff r2</li>
+<li><code>artifacts/original-model-quanteda-mle.R</code> – quanteda MLE r2</li>
+<li><code>artifacts/original-model-quanteda-kneser-ney.R</code> – quanteda Kneser-Ney r2</li>
+<li><code>artifacts/original-model-quanteda-good-turing.R</code> – quanteda Good-Turing + Katz r2</li>
+</ul>
+<p><strong>Environment:</strong></p>
+<ul>
+<li><code>renv.lock</code> and <code>renv/</code> – restore with <code>renv::restore()</code></li>
+</ul>
+<p><strong>License:</strong></p>
+<ul>
+<li>Code and scripts © Kara C. Hoover, licensed under the <a href="LICENSE">MIT License</a>.</li>
+<li>Data, figures, and written content © Kara C. Hoover, licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>.</li>
+</ul>
+<hr>
+</section>
+<section id="tools-technologies" class="level2">
+<h2 class="anchored" data-anchor-id="tools-technologies">Tools &amp; Technologies</h2>
+<p><strong>Languages:</strong> R</p>
+<p><strong>Tools:</strong> Shiny | shinyapps.io</p>
+<p><strong>Packages:</strong> shiny | shinycssloaders | bslib | stringr | dplyr | tidyr | data.table | kableExtra | tidytext | quanteda | lexicon | viridis | udpipe</p>
+<hr>
+</section>
+<section id="expertise" class="level2">
+<h2 class="anchored" data-anchor-id="expertise">Expertise</h2>
+<p><strong>Domain Expertise:</strong> natural language processing | n-gram language models | text mining | corpus linguistics | predictive modeling | interactive tool development</p>
+<p><strong>Transferable Expertise:</strong> Demonstrates ability to systematically explore and evaluate competing methodological approaches, document iterative development transparently, and deploy a working NLP application from a messy real-world corpus – skills directly applicable to any data pipeline or applied ML project requiring both technical rigor and honest documentation of what worked and what did not.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

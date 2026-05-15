@@ -1,0 +1,2 @@
+r1-quanteda-kneser-ney | top-10 accuracy: 6.4%
+r1-quanteda-kneser-ney | pos accuracy: 41.3%

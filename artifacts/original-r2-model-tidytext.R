@@ -4,6 +4,7 @@
 # BUG -- code that was broken and never worked
 # REVISED -- code that worked at the time but has been updated
 # NOTE -- explanatory context or design decisions
+# See model-tidytext-debugged.R for a corrected version.
 
 library(dplyr)    # data wrangling
 library(stringr)  # string manipulation
@@ -47,8 +48,9 @@ trigram = function(input_words) {
     ifelse(out == "character(0)", bigram(input_words), return(out))
 }
 
-# NOTE: quadgram function removed in original for testing due to size
-# added back in for archiving
+# BUG: quadgram function was missing entirely in the 25June version
+# referenced in predict_next_word but never defined -- caused immediate error
+# present in revised version only
 quadgram = function(input_words) {
     num = length(input_words)
     out = filter(quad_words,

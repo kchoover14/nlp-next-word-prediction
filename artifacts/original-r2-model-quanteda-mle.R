@@ -6,14 +6,14 @@
 # REVISED -- code that worked at the time but has been updated
 # NOTE -- explanatory context or design decisions
 
-library(tidyverse); library(tidytext)
+library(tidyverse); library(tidytext)       # REVISED: load individually per convention
 library(stringr); library(data.table)
 library(ggplot2); library(ggraph)
 library(quanteda)
 
 
 ######################## DATA PREPARATION
-# NOTE: iconv line never executed in original Rmd due loading issues
+# NOTE: iconv line appears outside code chunk in original Rmd -- never executed
 # iconv(text.sample, from='UTF-8', to='ASCII//TRANSLIT')
 
 blogs   <- readLines("data/SwiftKey/en_US/en_US.blogs.txt", skipNul=TRUE, encoding="UTF-8")

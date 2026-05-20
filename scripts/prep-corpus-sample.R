@@ -1,6 +1,3 @@
-# Start the clock!
-ptm = proc.time()
-
 ######################### LIBRARIES
 library(data.table)
 library(dplyr)

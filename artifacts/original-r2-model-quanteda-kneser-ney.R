@@ -6,7 +6,7 @@
 # REVISED -- code that worked at the time but has been updated
 # NOTE -- explanatory context or design decisions
 
-library(tidyverse); library(tidytext)
+library(tidyverse); library(tidytext)       # REVISED: load individually per convention
 library(stringr); library(data.table)
 library(ggplot2); library(ggraph)
 library(quanteda); library(quanteda.textplots)

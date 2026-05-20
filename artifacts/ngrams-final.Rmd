@@ -1,0 +1,263 @@
+---
+title: "ngrams"
+author: "Kara C. Hoover"
+date: "6/15/2021"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include=FALSE, echo = FALSE, warning = FALSE, message = FALSE)
+library(stringr)
+library(dplyr)
+library(data.table)
+library(tidytext)
+```
+
+## Data Preparation
+Sample data, 40%
+Course for data is found here:
+https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip
+
+Source for bad words list is found here:
+bw <- "https://www.freewebheaders.com/download/files/base-list-of-bad-words_csv-file_2021_01_18.zip"
+
+
+```{r samples, warning=FALSE, message=FALSE}
+#read data
+blogs <- readLines("final/en_US/en_US.blogs.txt", skipNul=TRUE,
+  encoding = "UTF-8")
+news <- readLines("final/en_US/en_US.news.txt", skipNul=TRUE,
+  encoding = "UTF-8")
+twitter<-readLines("final/en_US/en_US.twitter.txt", skipNul=TRUE,
+  encoding = "UTF-8")
+
+#dataframes for manipulation
+blogs   <- tibble(text = blogs)
+news    <- tibble(text = news)
+twitter <- tibble(text = twitter)
+
+#sample
+set.seed(2021) 
+samplesize <- .40 #set sample size
+
+blogs.sample <- blogs %>%
+  sample_n(., nrow(blogs)*samplesize)
+news.sample <- news %>%
+  sample_n(., nrow(news)*samplesize)
+twitter.sample <- twitter %>%
+  sample_n(., nrow(twitter)*samplesize)
+
+#combine samples
+text.sample <- bind_rows(
+  mutate(blogs.sample, source="blogs"),
+  mutate(news.sample, source="news"), 
+  mutate(twitter.sample, source="twitter"))
+text.sample$source <- as.factor(text.sample$source)
+text.sample <- tibble(text.sample)
+
+#tidy
+rm(blogs, news, twitter,
+  blogs.sample, news.sample, twitter.sample,
+  samplesize)
+```
+
+## Clean Text Data
+The ngram generation process makes data to lower case so that step is omitted in data cleaning
+
+
+#remove symbols 
+If encoding character remain, try
+iconv(text.sample, from = 'UTF-8', to = 'ASCII//TRANSLIT')
+save(text.sample, file = "text-ascii.RData", ascii=TRUE)
+
+```{r clean, message=FALSE, results='hold', warning=FALSE}
+#remove punct except apost, symbols, http, www
+text.clean <- text.sample %>%
+  mutate(text=str_replace_all(text, "[^[:alnum:][:space:]']", "")) %>%
+  mutate(text=str_replace_all(text, "[[:digit:]]", "")) %>%
+  mutate(text=str_replace_all(text, " ?(f|ht)tp(s?)://(.*)[.][a-z]+", "")) %>%
+  mutate(text=str_replace_all(text, " www\\.[^ ]*", ""))
+
+text.clean <- rename(text.clean, word = text)
+
+#tidy
+rm(text.sample)
+```
+
+## Remove profanity
+```{r profanity}
+#get badwords file
+badwords <- read.csv(
+    "base-list-of-bad-words_csv-file_2021_01_18.csv", 
+    skip=12, skipNul=TRUE, stringsAsFactors = FALSE, header=FALSE,
+  col.names =c("word", "v1", "v2", "v3"), na.strings =
+    "-------------------------------------------------------")
+badwords <- data.frame(badwords)
+badwords <- select(badwords, "word")
+
+#remove words
+text.clean <- text.clean %>% anti_join(badwords)
+
+#tidy
+rm(badwords); gc()
+```
+
+## Create ngrams 
+```{r ngrams}
+unigrams <- text.clean %>%
+  unnest_tokens(unigram, word, token = "ngrams", n = 1) %>%
+  count(unigram, sort = TRUE)
+bigrams <- text.clean %>%
+  unnest_tokens(bigram, word, token = "ngrams", n = 2) %>%
+  count(bigram, sort = TRUE)
+trigrams <- text.clean %>%
+  unnest_tokens(trigram, word, token = "ngrams", n = 3) %>%
+  count(trigram, sort = TRUE)
+quadgrams <- text.clean %>%
+  unnest_tokens(quadgram, word, token = "ngrams", n = 4) %>%
+  count(quadgram, sort = TRUE)
+```
+
+## Clean up
+```{r rmClean}
+rm(text.clean)
+gc()
+```
+
+##  checkpoint: save ngrams
+Save so that debugging can start with ngrams and save time re-generating.
+
+```{r saveNgrams}
+fwrite(unigrams, "unigrams.txt")
+fwrite(bigrams, "bigrams.txt")
+fwrite(trigrams, "trigrams.txt")
+fwrite(quadgrams, "quadgrams.txt")
+```
+
+## checkpoint read ngrams
+If debugging, start here with saved ngrams to save time regenerating.
+
+```{r readNgrams}
+unigrams <- fread("unigrams.txt", data.table=FALSE)
+bigrams <- fread("bigrams.txt", data.table=FALSE)
+trigrams <- fread("trigrams.txt", data.table=FALSE)
+quadgrams <- fread("quadgrams.txt", data.table=FALSE)
+```
+
+## Trim ngrams by proporation
+ngrams from 28June21 had count over 10 and 90% coverage. Here, the plus 10 method trimmed all values out. reverted to prop90 even though bigger in size.
+
+```{r trimNgrams}
+#percent
+prop90.unigram <- unigrams %>% count(unigram) %>%  
+  mutate(proportion=n / sum(n)) %>% 
+  arrange(desc(proportion)) %>%
+  mutate(coverage = cumsum(proportion))%>%
+  filter(coverage <= 0.9)
+prop90.bigram <- bigrams %>% count(bigram) %>%  
+  mutate(proportion=n / sum(n)) %>% 
+  arrange(desc(proportion)) %>%
+  mutate(coverage = cumsum(proportion))%>%
+  filter(coverage <= 0.9) 
+prop90.trigram <- trigrams %>% count(trigram) %>%  
+  mutate(proportion=n / sum(n)) %>% 
+  arrange(desc(proportion)) %>%
+  mutate(coverage = cumsum(proportion))%>%
+  filter(coverage <= 0.9)
+prop90.quadgram <- quadgrams %>% count(quadgram) %>% 
+  mutate(proportion=n / sum(n)) %>% 
+  arrange(desc(proportion)) %>%
+  mutate(coverage = cumsum(proportion))%>%
+  filter(coverage <= 0.9)
+```
+
+## Checkpoint: Write prop filtered data and tidy
+If debugging, save data here
+
+```{r filterData}
+fwrite(prop90.unigram, "unigrams.trim")
+fwrite(prop90.bigram, "bigrams.trim")
+fwrite(prop90.trigram, "trigrams.trim")
+fwrite(prop90.quadgram, "quadgrams.trim")
+
+rm(unigrams, bigrams, trigrams, quadgrams,
+  prop90.unigram, prop90.bigram, prop90.trigram, prop90.quadgram)
+gc()
+```
+
+
+## Checkpoint: Read data
+If debugging, read data back here.
+
+```{r readFiltered}
+#read data
+prop90.unigram <- fread("unigrams.trim")
+prop90.bigram <- fread("bigrams.trim")
+prop90.trigram <- fread("trigrams.trim")
+prop90.quadgram <- fread("quadgrams.trim")
+```
+
+
+# Index
+```{r index}
+setkey(setDT(prop90.bigram), word1, word2)
+setkey(setDT(prop90.trigram), word1, word2, word3)
+setkey(setDT(prop90.quadgram), word1, word2, word3, word4)
+```
+
+## split into separate words 
+```{r separate}
+#separate ngrams
+bigrams.sep <- prop90.bigram %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>% na.omit()
+trigrams.sep <- prop90.trigram %>%
+  separate(trigram, c("word1", "word2", "word3"), sep = " ") %>% na.omit()
+quadgrams.sep <- prop90.quadgram %>%
+  separate(quadgram, c("word1", "word2", "word3", "word4"), sep = " ") %>% na.omit()
+```
+
+
+## Checkpoint: Save separated ngram data
+For debugging, save point.
+
+```{r saveSeparated}
+fwrite(bigrams.sep, "sep90.bigrams.txt")
+fwrite(trigrams.sep, "sep90.trigrams.txt")
+fwrite(quadgrams.sep, "sep90.quadgrams.txt")
+
+rm(sep90.bigrams, sep90.trigrams, sep90.quadgrams)
+gc()
+```
+
+## Unite ngrams
+```{r uniteNgras}
+bigrams <- bigrams %>%
+  unite(bigram, word1, word2, sep = " ")
+trigrams <- trigrams %>%
+  unite(trigram, word1, word2, word3, sep = " ")
+quadgrams <- quadgrams %>%
+  unite(quadgram, word1, word2, word3, word4, sep = " ")
+```
+
+## Save united ngram data
+```{r save sep ngrams}
+fwrite(unigrams, "unigrams.final.txt")
+fwrite(bigrams, "bigrams.final.txt")
+fwrite(trigrams, "trigrams.final.txt")
+fwrite(quadgrams, "quadgrams.final.txt")
+```
+
+## Model
+use log and add probabilities for speed
+looks like standford model takes bigram counts divided against unigram counts
+prediction model then is full sentence divided into bigrams with prob added
+
+Minimize perplexity by allowing for unseen words makes better low (low perplexS)
+Perplexity is inverse probability of test set (max prob), normalized by number of words
+
+LaPlace and Kneser-Ney smoothing might not be good for these big datasets. Stupid back-off then with no discounting and only relative frequencies. Good turing might be good b/c it predicts novel words more.
+
+## Test Model
+use each model for a task and measure accuracy and speed

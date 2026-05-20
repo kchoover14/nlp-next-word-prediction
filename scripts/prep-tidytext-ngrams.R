@@ -31,22 +31,22 @@ unigrams_trim = unigrams |>
   mutate(proportion=n / sum(n)) |>
   arrange(desc(proportion)) |>
   mutate(coverage = cumsum(proportion))|>
-  filter(coverage <= 0.9)
+  filter(coverage <= 0.8)
 bigrams_trim = bigrams |>
   mutate(proportion=n / sum(n)) |>
   arrange(desc(proportion)) |>
   mutate(coverage = cumsum(proportion))|>
-  filter(coverage <= 0.9)
+  filter(coverage <= 0.8)
 trigrams_trim = trigrams |>
   mutate(proportion=n / sum(n)) |>
   arrange(desc(proportion)) |>
   mutate(coverage = cumsum(proportion))|>
-  filter(coverage <= 0.9)
+  filter(coverage <= 0.8)
 quadgrams_trim = quadgrams |>
   mutate(proportion=n / sum(n)) |>
   arrange(desc(proportion)) |>
   mutate(coverage = cumsum(proportion))|>
-  filter(coverage <= 0.9)
+  filter(coverage <= 0.8)
 
 #### split ngrams
 bigrams_split = bigrams_trim |>
@@ -60,11 +60,6 @@ quadgrams_split = quadgrams_trim |>
 setkey(setDT(bigrams_split), word1, word2)
 setkey(setDT(trigrams_split), word1, word2, word3)
 setkey(setDT(quadgrams_split), word1, word2, word3, word4)
-
-#### unite ngrams, OPTIONAL IF FILE BLOAT?
-#bigrams_united = unite(bigrams_split, word1, word2, sep = " ")
-#trigrams_united = unite(trigrams_split, word1, word2, word3, sep = " ")
-#quadgrams_united = unite(quadgrams_split, word1, word2, word3, word4, sep = " ")
 
 
 ######################## PREP TEST NGRAMS
@@ -84,17 +79,17 @@ bigrams_test_trim = bigrams_test |>
   mutate(proportion=n / sum(n)) |>
   arrange(desc(proportion)) |>
   mutate(coverage = cumsum(proportion))|>
-  filter(coverage <= 0.9)
+  filter(coverage <= 0.8)
 trigrams_test_trim = trigrams_test |>
   mutate(proportion=n / sum(n)) |>
   arrange(desc(proportion)) |>
   mutate(coverage = cumsum(proportion))|>
-  filter(coverage <= 0.9)
+  filter(coverage <= 0.8)
 quadgrams_test_trim = quadgrams_test |>
   mutate(proportion=n / sum(n)) |>
   arrange(desc(proportion)) |>
   mutate(coverage = cumsum(proportion))|>
-  filter(coverage <= 0.9)
+  filter(coverage <= 0.8)
 
 #### split ngrams
 bigrams_test_split = bigrams_test_trim |>

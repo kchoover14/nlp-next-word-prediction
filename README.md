@@ -1,6 +1,6 @@
 ## Next-Word Prediction Shiny App
 
-This project builds a Shiny app that predicts the next word from user text input using a Stupid Backoff n-gram model trained on the SwiftKey corpus — a 70-million-word English-language collection of blogs, news, and tweets. Originally built in 2021 as part of the Johns Hopkins Data Science Specialization capstone, the app was revised in 2026 with improved accuracy testing, updated models, and a redesigned interface. Six statistical methods were implemented before Stupid Backoff was confirmed as the best-performing approach, achieving 50.8% top-10 accuracy and 56.7% part-of-speech (POS) accuracy on the deployed 40% training sample.
+This project builds a Shiny app that predicts the next word from user text input using a Stupid Backoff n-gram model trained on the SwiftKey corpus — a 70-million-word English-language collection of blogs, news, and tweets. Originally built in 2021 as part of the Johns Hopkins Data Science Specialization capstone, the app was revised in 2026 with improved accuracy testing, updated models, and a redesigned interface. Six statistical methods were implemented before Stupid Backoff was confirmed as the best-performing approach, achieving 50.8% top-10 accuracy and 56.7% part-of-speech (POS) accuracy on the 50% training sample.
 
 ## Portfolio Page
 
@@ -16,7 +16,7 @@ The [portfolio page](https://kchoover14.github.io/nlp-next-word-prediction) incl
 
 **Tools:** Shiny | shinyapps.io
 
-**Packages:** shiny | shinycssloaders | bslib | stringr | dplyr | tidyr | data.table | kableExtra | tidytext | quanteda | lexicon | viridis | udpipe
+**Packages:** shiny | shinycssloaders | bslib | stringr | dplyr | tidyr | data.table | tidytext | quanteda | lexicon | hunspell | viridis | udpipe
 
 ## Environment
 

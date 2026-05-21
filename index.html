@@ -55,14 +55,15 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#app-features" id="toc-app-features" class="nav-link" data-scroll-target="#app-features">App Features</a>
   <ul class="collapse">
   <li><a href="#next-word-prediction" id="toc-next-word-prediction" class="nav-link" data-scroll-target="#next-word-prediction">Next Word Prediction</a></li>
-  <li><a href="#top-10-predictions-chart" id="toc-top-10-predictions-chart" class="nav-link" data-scroll-target="#top-10-predictions-chart">Top 10 Predictions Chart</a></li>
-  <li><a href="#metadata-table" id="toc-metadata-table" class="nav-link" data-scroll-target="#metadata-table">Metadata Table</a></li>
+  <li><a href="#exact-match-panel" id="toc-exact-match-panel" class="nav-link" data-scroll-target="#exact-match-panel">Exact Match Panel</a></li>
+  <li><a href="#best-predictions-panel" id="toc-best-predictions-panel" class="nav-link" data-scroll-target="#best-predictions-panel">Best Predictions Panel</a></li>
   </ul></li>
   <li><a href="#study-design" id="toc-study-design" class="nav-link" data-scroll-target="#study-design">Study Design</a>
   <ul class="collapse">
   <li><a href="#corpus" id="toc-corpus" class="nav-link" data-scroll-target="#corpus">Corpus</a></li>
   <li><a href="#model-development" id="toc-model-development" class="nav-link" data-scroll-target="#model-development">Model Development</a></li>
   <li><a href="#models-methods-and-implementations" id="toc-models-methods-and-implementations" class="nav-link" data-scroll-target="#models-methods-and-implementations">Models: Methods and Implementations</a></li>
+  <li><a href="#app-data-pipeline" id="toc-app-data-pipeline" class="nav-link" data-scroll-target="#app-data-pipeline">App Data Pipeline</a></li>
   <li><a href="#testing-model-accuracy-2026" id="toc-testing-model-accuracy-2026" class="nav-link" data-scroll-target="#testing-model-accuracy-2026">Testing Model Accuracy 2026</a></li>
   </ul></li>
   <li><a href="#project-resources" id="toc-project-resources" class="nav-link" data-scroll-target="#project-resources">Project Resources</a></li>
@@ -71,7 +72,7 @@ ul.task-list li input[type="checkbox"] {
   </ul>
 </nav>
 </div>
-<main class="content page-columns page-full" id="quarto-document-content">
+<main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
@@ -114,13 +115,15 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="executive-summary" class="level2">
 <h2 class="anchored" data-anchor-id="executive-summary">Executive Summary</h2>
-<p><strong>Rationale:</strong> The goal was to build a Shiny app that predicts the next word from user text input using natural language processing techniques. The corpus used for training is the <a href="https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip">SwiftKey dataset</a>, a large English-language collection of blogs, news articles, and tweets totalling approximately 200MB and 70 million words across three sources. Multiple modeling approaches were explored across four R packages — tidytext, quanteda, text2vec, and word2vec — including Stupid Backoff, MLE, interpolated backoff, Kneser-Ney smoothing, and Good-Turing smoothing. Stupid Backoff was the best performing model in 2021 and 2026. The new app version uses an improved Stupid Backoff model and UX design.</p>
+<p><strong>Rationale:</strong> The goal was to build a Shiny app that predicts the next word from user text input using natural language processing (NLP) techniques. The corpus used for training is the <a href="https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip">SwiftKey dataset</a>, a large English-language collection of blogs, news articles, and tweets totalling approximately 200MB and 70 million words across three sources. Multiple modeling approaches were explored across four R packages — tidytext, quanteda, text2vec, and word2vec — including Stupid Backoff, MLE, interpolated backoff, Kneser-Ney smoothing, and Good-Turing smoothing. Stupid Backoff was the best performing model in 2021 and 2026. The 2026 app version uses an improved Stupid Backoff model built on pentagrams drawn from a 70% stratified sample of the corpus.</p>
 <p><strong>App Highlights</strong></p>
 <ul>
-<li>Accepts user text input and predicts the next word using a Stupid Backoff algorithm across unigram, bigram, trigram, and quadgram lookup tables, sampled from the top results weighted by probability</li>
-<li>Displays the top 10 predicted words and their probabilities in a bar chart</li>
-<li>Provides a metadata table showing which n-gram level was matched, total possibilities in that n-gram dataset, and number of matches found</li>
-<li>Supports both Go button and Enter key to trigger predictions</li>
+<li>Accepts user text input and predicts the next word using a windowed pentagram lookup with systematic backoff — searches all valid sequence positions across word1–word5, dropping the first word when matches are exhausted</li>
+<li>At the exact sequence level, allows up to 3 high-coverage stop words (e.g., of, a, the, not) alongside content word predictions (e.g., noun, verb, adjective, adverb) to capture natural completions while avoiding returning stop word heavy predictions.</li>
+<li>POS tag caching — uses udpipe to tag words by parts of speed and stores in session cache to improve response speed</li>
+<li>In addition to best prediction, there are two displays panels that each search the corpus for the exact input text, backing off to smaller ngrams if not found: Exact Match: if the input appears in the corpus, returns all results ranked by coverage (including best prediction); if no sequence match is found at any backoff level, searches for the last content word in input across pentagrams word1–word4, filters by coverage ≥ 0.50, and selects top word5. Best Predictions (fallback): filters results to nouns, proper nouns, and adjectives, then backfills with high-coverage unigrams from the pentagram pool when fewer than 10 POS-filtered results are found.</li>
+<li>Supports both Go button and Enter key to trigger predictions; clears panels on new input</li>
+<li>Built on a 70% stratified sample pentagram corpus (~157,500 rows) derived from news, blog, and Twitter text</li>
 </ul>
 <div class="callout callout-style-default callout-warning callout-titled">
 <div class="callout-header d-flex align-content-center">
@@ -137,65 +140,37 @@ ul.task-list li input[type="checkbox"] {
 </div>
 <hr>
 </section>
-<section id="app-features" class="level2 page-columns page-full">
+<section id="app-features" class="level2">
 <h2 class="anchored" data-anchor-id="app-features">App Features</h2>
 <section id="next-word-prediction" class="level3">
 <h3 class="anchored" data-anchor-id="next-word-prediction">Next Word Prediction</h3>
-<p>The app accepts a text string from the user and returns a predicted next word (<strong>Figure 1</strong>). Input is cleaned to lowercase before matching. The prediction uses a Stupid Backoff algorithm: the app first attempts to match the last three words of input against the quadgram lookup table. If no match is found it backs off to trigrams, then bigrams, then unigrams. The predicted word is sampled from the top 10 candidates at the matched n-gram level, weighted by probability, introducing variety across repeated queries while preserving the probability-based ranking. Stop words and single-character tokens are excluded from the predicted word display in the app interact.</p>
+<p>The app accepts a text string from the user and returns a predicted next word (<strong>Figure 1</strong>). Input is cleaned to lowercase, with apostrophes normalized and possessives removed before matching. Any input over 4 words uses only the last 4 words for the corpus search. The corpus search starts with max of four ngrams and then backs off to smaller ngrams if a match is not found. The predicted word is the first content word (noun, verb, adjective, adverb, or pronoun) from the Exact Match results ranked by coverage, selected via udpipe POS tagging. Up to 3 high-coverage stop words (quanteda stop word list) are permitted in the results but are skipped when selecting the predicted word. Up to 3 high-coverage stop words (quanteda stop word list) are permitted in the results, so the predicted word may occasionally be a stop word when it is the most probable continuation of the input. If no content word is found, the highest-coverage match from Best Predictions is returned. Total possibilities (pentagram corpus size) and exact match count are displayed as footnotes in the top panel.</p>
 <p><strong>Figure 1. App interface showing user input and predicted next word.</strong></p>
-<p><img src="outputs/fig-app-interface.png" class="img-fluid"> <strong>Interpretation:</strong> The prediction panel shows the most likely next word given the user input. The sidebar displays the predicted word prominently above the visualization tabs.</p>
+<p><img src="outputs/fig-app-interface.png" class="img-fluid"></p>
+<p><strong>Interpretation:</strong> The top panel shows the user input field, Go button, and predicted next word. Total possibilities and exact match count appear below as context for the prediction.</p>
 </section>
-<section id="top-10-predictions-chart" class="level3 page-columns page-full">
-<h3 class="anchored" data-anchor-id="top-10-predictions-chart">Top 10 Predictions Chart</h3>
-<p>The prediction bar chart in <strong>Figure 2</strong> displays the top 10 candidate next words ranked by probability, with the number of candidates varying based on matches found at the matched n-gram level . Bars are filled using the mako palette, with higher-probability predictions shown in darker shades. Probability is calculated as the count of the matched n-gram divided by the total count of all n-grams sharing the same prefix.</p>
-<p><strong>Figure 2. Top 10 predicted next words with probability scores for different types of matches</strong></p>
-<div class="column-page">
-<div class="quarto-layout-panel" data-layout-ncol="3">
-<div class="quarto-layout-row">
-<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="outputs/match-single.png" class="img-fluid figure-img"></p>
-<figcaption>A) Single match</figcaption>
-</figure>
-</div>
-</div>
-<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="outputs/match-many.png" class="img-fluid figure-img"></p>
-<figcaption>B) Many matches</figcaption>
-</figure>
-</div>
-</div>
-<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="outputs/match-strong.png" class="img-fluid figure-img"></p>
-<figcaption>C) Strong match</figcaption>
-</figure>
-</div>
-</div>
-</div>
-</div>
-</div>
-<p><strong>Interpretation:</strong> The charts reveal how probability distributions vary across prediction contexts. A single dominant bar indicates a strong contextual match (C); a more even distribution across candidates reflects a weaker match with multiple plausible completions (B); and a single bar at 1.0 indicates exactly one match was found at that ngram level (A).</p>
+<section id="exact-match-panel" class="level3">
+<h3 class="anchored" data-anchor-id="exact-match-panel">Exact Match Panel</h3>
+<p>The Exact Match panel (<strong>Figure 2</strong>) displays corpus sequence matches ranked by coverage using a sliding window search followed by a backoff if needed–a contextual prediction. Either full input text or the last four words of text 5+ words in length searches in sliding windows across word1–word4 for a match. If a match is found, the predicted word is the column immediately following the last matched word (for four words, Word5 in pentagrams is a match). Up to 3 high-coverage stop words are allowed alongside content words, enabling natural predictions like “not” following “he did.” If there are not ten exact matches to full input sequence, the stupid backoff is triggered. The backoff filters stop words and drops the first input word to search for a match, dropping input words until all options are exhausted. Numerics and input words are excluded from all predictions.</p>
+<p><strong>Figure 2. Exact Match panel showing corpus sequence predictions for “where did you go to”.</strong></p>
+<p><img src="outputs/fig-exact-match.png" class="img-fluid"></p>
+<p><strong>Interpretation:</strong> Bars represent predictions ranked by coverage (cumulative corpus frequency). Stop words may appear among the top predictions when they are the most probable continuations of the input sequence. This panel provides the most accurate matche for the user.</p>
 </section>
-<section id="metadata-table" class="level3">
-<h3 class="anchored" data-anchor-id="metadata-table">Metadata Table</h3>
-<p>The metadata table shows the mechanics of the prediction: which n-gram level produced the match, the total number of n-grams at that level, and the number of matches found for the user input. This transparency about the backoff process was a deliberate design choice to make the model’s behavior interpretable.</p>
-<p><strong>Figure 3. Metadata table showing prediction mechanics.</strong></p>
-<p><img src="outputs/fig-app-table.png" class="img-fluid"></p>
-<p><strong>Interpretation:</strong> When the n-gram evaluated is a quadgram and matches are high, the prediction is well-grounded in the corpus. When the model reports backing off to unigrams with zero matches, the prediction is essentially a frequency-ranked guess from the full vocabulary.</p>
+<section id="best-predictions-panel" class="level3">
+<h3 class="anchored" data-anchor-id="best-predictions-panel">Best Predictions Panel</h3>
+<p>The Best Predictions panel (<strong>Figure 3</strong>) offers predictions using high-coverage unigrams with POS tagging as drawn from all five pentagram word columns and provides fallback options for the user if the predicted words were incorrect–a frequency-based approach. The use of POS tagging is designed to surface the most grammatically appropriate and content-rich predictions even if selecting by corpus frequency.</p>
+<p><strong>Figure 3. Best Predictions panel using POS-tagging and frequency to find a prediction for “where did you go to”.</strong></p>
+<p><img src="outputs/fig-best-predictions.png" class="img-fluid"></p>
+<p><strong>Interpretation:</strong> Bars represent POS-filtered predictions based on POS and frequency (high-coverage unigrams in the pentagram pool). This panel complements the Exact Match panel by providing additional predictions should the output not meet user expectations.</p>
 <hr>
 </section>
 </section>
 <section id="study-design" class="level2">
 <h2 class="anchored" data-anchor-id="study-design">Study Design</h2>
-<p>The original project (2021) was a capstone assignment for the Johns Hopkins Data Science Specialization on Coursera. Coming to NLP with no prior exposure, I independently learned and implemented multiple modeling approaches in R over six weeks — with no instruction on accuracy testing, I designed and built the evaluation framework from scratch. I built and tested several models before settling on a Stupid Backoff n-gram model for the deployed app. In 2026 I decided to revamp the original app using improved tools.</p>
+<p>The original project (2021) was a capstone assignment for the Johns Hopkins Data Science Specialization on Coursera. Coming to NLP with no prior exposure, I independently learned and implemented multiple modeling approaches in R over six weeks — with no instruction on accuracy testing, I designed and built the evaluation framework from scratch. In 2026 I decided to revamp the original app using improved tools.</p>
 <section id="corpus" class="level3">
 <h3 class="anchored" data-anchor-id="corpus">Corpus</h3>
-<p>The SwiftKey dataset contains English-language text from three sources. <strong>Table 1</strong> summarizes the corpus. Text was cleaned by removing punctuation (except apostrophes), digits, URLs, and profanity. In 2021, I experimented with removing stop words but the UX was poor and I reverted to including them.</p>
+<p>The SwiftKey dataset contains English-language text from three sources. <strong>Table 1</strong> summarizes the corpus. Text was cleaned by removing punctuation (except apostrophes), digits, URLs, and profanity using the <code>lexicon::profanity_alvarez</code> list. In 2021, I experimented with removing stop words but the UX was poor and I reverted to including them.</p>
 <p><strong>Table 1. SwiftKey Corpus Summary</strong></p>
 <table class="caption-top table">
 <thead>
@@ -243,22 +218,28 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="model-development">Model Development</h3>
 <p>Building the n-gram lookup tables required substantial iterative work spanning June-July 2021. In addition to early exploration of topic-based prediction using Latent Dirichlet Allocation (LDA), other approaches were explored and deemed inappropriate. The two main ones were:</p>
 <ul>
-<li><strong>Text2Vec Model</strong>.GloVe Word Embeddings and Collocation: GloVe is a semantic similarity approach that represents words as dense vectors based on co-occurrence statistics, capturing semantic relationships rather than word sequences. The advantage is rich semantic representation — words with similar meanings cluster in vector space. The limitation is fundamental to the architecture: GloVe is not a sequence model and cannot predict the next word in a sentence without additional architecture. A term co-occurrence matrix was built from a 40% sample using a skip-gram window of 5, and GloVe was fitted with rank 50 over 10 iterations. The classic Paris-France-Germany analogy test confirmed the embeddings captured semantic relationships. A collocation variant with a different vector arithmetic test was also attempted. Both variants were abandoned as unsuitable for the sequence prediction task.</li>
-<li><strong>Word2Vec Model</strong>. CBOW and Skipgram: Word2Vec produces dense word embeddings that capture semantic relationships in both continuous bag-of-words and skipgram variants. Like GloVe, the strength is semantic representation — the embeddings reflect meaningful word relationships. The limitation is the same: Word2Vec is not a sequence model, and nearest-neighbor predictions using cosine similarity produce semantically related words rather than contextually likely next words. Both CBOW and skipgram models were trained on the 90% training split. Both were abandoned as unsuitable for sequence prediction.</li>
+<li><p><strong>Text2Vec Model</strong>. GloVe Word Embeddings and Collocation: GloVe is a semantic similarity approach that represents words as dense vectors based on co-occurrence statistics, capturing semantic relationships rather than word sequences. The advantage is rich semantic representation — words with similar meanings cluster in vector space. The limitation is fundamental to the architecture: GloVe is not a sequence model and cannot predict the next word in a sentence without additional architecture. A term co-occurrence matrix was built from a 40% sample using a skip-gram window of 5, and GloVe was fitted with rank 50 over 10 iterations. The classic Paris-France-Germany analogy test confirmed the embeddings captured semantic relationships. A collocation variant with a different vector arithmetic test was also attempted. Both variants were abandoned as unsuitable for the sequence prediction task.</p></li>
+<li><p><strong>Word2Vec Model</strong>. CBOW and Skipgram: Word2Vec produces dense word embeddings that capture semantic relationships in both continuous bag-of-words and skipgram variants. Like GloVe, the strength is semantic representation — the embeddings reflect meaningful word relationships. The limitation is the same: Word2Vec is not a sequence model, and nearest-neighbor predictions using cosine similarity produce semantically related words rather than contextually likely next words. Both CBOW and skipgram models were trained on the 50% training split. Both were abandoned as unsuitable for sequence prediction.</p></li>
 </ul>
-<p>Forty percent of each SwiftKey dataset was subsampled and then combined into a single corpus. Quanteda and tidytext were used for corpus processing and trimming (filter by count or coverage). App data were generated with and without stopwords. Trimming by coverage and retaining stopwords resulted in better UX and the final implementaions were tested for accuracy to assess whether the top-1 predicted word matched the target word using quadgram data as the test set. Stupid Backoff achieved 14.21% top-1 accuracy when predicting the <strong>exact word</strong>, not probable matches. Updated versions of original scripts for quanteda and tidytext have been consolidated and updated but any original bugs retained with annotations. These are shared in artifacts/.</p>
-<p>The 2026 project revisited the 2021 findings updating the approaches and introducing a new accuracy framework. An interterpolated approach was added and prior attempts at MLE were debugged. As with the 2021 project, 40% of the individual source files were sampled then joined. An additional 10% was subsampled from each source dataset to use as a test set for accuracy testing. The accuracy metric was expanded to top-10 and part-of-speech (POS) accuracy via udpipe. New accuracy metrics thus evaluated whether the correct word appeared in the top 10 candidates and whether the predicted word was grammatically appropriate.</p>
-<p>Tidytext Stupid Backoff and Interpolated Backoff performed nearly equally, but the interpolated model consistently favored specific high-frequency words, resulting in poor UX. Stupid Backoff was confirmed as the final model. The app was redesigned with a modernized interface using bslib, a revised metadata table, weighted probability sampling for the predicted word, and Enter key support.</p>
+<p>Forty percent of each SwiftKey dataset was subsampled and then combined into a single corpus for 2021 development. Quanteda and tidytext were used for corpus processing and trimming (filter by count or coverage). App data were generated with and without stopwords. Trimming by coverage and retaining stopwords resulted in better UX and the final implementations were tested for accuracy to assess whether the top-1 predicted word matched the target word using quadgram data as the test set. Stupid Backoff achieved 14.21% top-1 accuracy when predicting the exact word, not probable matches. Updated versions of original scripts for quanteda and tidytext have been consolidated and updated but any original bugs retained with annotations. These are shared in artifacts/.</p>
+<p>The 2026 project revisited the 2021 findings updating the approaches and introducing a new accuracy framework. An interpolated approach was added and prior attempts at MLE were debugged. Fifty percent of the individual source files were sampled then joined (the 2021 project sampled 40%). An additional 10% was subsampled from each source dataset to use as a test set for accuracy testing. The accuracy metric was expanded to top-10 and part-of-speech (POS) accuracy via udpipe. New accuracy metrics thus evaluated whether the correct word appeared in the top 10 candidates and whether the predicted word was grammatically appropriate.</p>
+<p>Tidytext Stupid Backoff and Interpolated Backoff performed nearly equally, but the interpolated model consistently favored specific high-frequency words, resulting in poor UX. Stupid Backoff was confirmed as the final model.</p>
 </section>
 <section id="models-methods-and-implementations" class="level3">
 <h3 class="anchored" data-anchor-id="models-methods-and-implementations">Models: Methods and Implementations</h3>
-<p><strong>tidytext Models</strong>. Stupid Backoff (2021 and 2026 winner): Stupid Backoff matches the input against the highest-order ngram available, backs off through lower orders if no match is found, and falls back to top unigrams as a last resort. No smoothing is applied — relative frequencies are used directly. The approach is simple, fast, and reliable, making it well suited to a Shiny deployment with memory and speed constraints. The primary limitation is that it assigns no probability to unseen ngrams and applies no discounting to redistribute probability mass. The tidytext implementation used unnest_tokens, a 90% cumulative coverage filter, and separated word columns keyed for fast lookup.</p>
+<p><strong>tidytext Models</strong>. Stupid Backoff (2021 and 2026 winner): Stupid Backoff matches the input against the highest-order ngram available, backs off through lower orders if no match is found, and falls back to top unigrams as a last resort. No smoothing is applied — relative frequencies are used directly. The approach is simple, fast, and reliable, making it well suited to a Shiny deployment with memory and speed constraints. The primary limitation is that it assigns no probability to unseen ngrams and applies no discounting to redistribute probability mass. The tidytext implementation used unnest_tokens, filters (rare ngrams, 80% cumulative coverage, dictionary matches), and separated word columns keyed for fast lookup.</p>
 <p>Maximum Likelihood Estimation (MLE): MLE computes the probability of a word given its preceding context as a relative frequency — the count of the ngram divided by the count of the preceding context. No smoothing or discounting is applied. MLE is transparent, fast, and easy to implement. The primary limitation is brittleness on unseen ngrams: any input absent from the training data returns zero probability with no recovery beyond dropping to a lower ngram order. The tidytext implementation followed the same pipeline as Stupid Backoff — unnest_tokens, 90% coverage filter, separated word columns — with probability computed as n divided by the sum of n within each preceding context group.</p>
 <p>Interpolated Backoff: Interpolated backoff combines probability estimates across all ngram levels rather than committing to the highest-order match and backing off only on failure. The final probability for a predicted word is a weighted sum of its quadgram, trigram, bigram, and unigram probabilities, with lambda weights that sum to one. This smooths over sparse data at higher ngram levels by always incorporating lower-order evidence, making it more robust than Stupid Backoff or MLE when training data is sparse. The cost is additional computation relative to the simpler approaches. The tidytext implementation used the same 90% coverage-filtered ngram data, computing interpolated probabilities across all four levels and returning the top candidates by combined score.</p>
 <p><strong>Quanteda Models</strong> Simple MLE Backoff: Maximum likelihood estimation with a simple backoff strategy — match the longest possible ngram, back off to shorter ngrams if no match is found, return nothing if all levels fail. MLE is simple, fast, and interpretable. The limitation is zero probability for unseen ngrams with no smoothing to redistribute probability mass. The quanteda tokenization pipeline was used to build document-feature matrices from the training data with dfm_trim applied to reduce sparsity. The script was abandoned after data preparation — no model code was written. The decision was made to move directly to more sophisticated smoothing methods rather than reimplement MLE in a second framework.</p>
 <p>Kneser-Ney Smoothing: Kneser-Ney smoothing computes continuation probabilities — the likelihood of a word appearing in a novel context — rather than raw frequency. This makes it theoretically superior to MLE and Stupid Backoff for handling unseen ngrams, particularly for lower-order models. The standard Kneser-Ney formula with a discount value of 0.75 was implemented using a quanteda DFM pipeline. The model produced mathematically sound probability estimates but failed in practice due to an incompatibility between quanteda’s underscore separator in its internal token representation and the space-separated format required by the prediction functions. Errors in the backoff and binding functions prevented successful deployment.</p>
 <p>Good-Turing Smoothing with Katz Backoff: Good-Turing smoothing re-estimates the probability of unseen ngrams by reallocating probability mass from observed ngrams based on the frequency of frequencies. Combined with Katz backoff, which applies an alpha normalization factor, the approach is theoretically well suited to handling sparse data and novel word sequences. The implementation built a quanteda DFM pipeline, fitted log-linear regression models to estimate smoothed counts, and implemented the full Katz backoff chain from trigrams through unigrams. The July iteration produced output but returned only the same five words for any input — a symptom of the alpha normalization factor collapsing to a constant, likely caused by the quanteda underscore separator issue. Multiple iterations (originally labeled model3, 4a, and 4b) were attempted with minor data preparation differences; none resolved the core issue.</p>
 <p><strong>A note on transformer and LSTM approaches:</strong> Contextual language models such as GPT-2 and BERT existed in 2021 and would in principle address the semantic limitations of ngram approaches. However, practical access in R was limited: the keras and tensorflow packages provided an R interface to LSTM sequence models, and this was explored, but the implementation complexity for a sequence model on a 70-million-word corpus was out of scope for a capstone assignment. HuggingFace transformer inference in R was experimental at the time and not production-ready. The text package, which now wraps HuggingFace models cleanly, was in early development. The ngram approach was the correct practical choice given the assignment constraints and the R ecosystem in 2021. The semantic ceiling of the deployed app — predicting grammatically plausible but not always contextually precise words — is an inherent limitation of frequency-based ngram models rather than a failure of implementation.</p>
+</section>
+<section id="app-data-pipeline" class="level3">
+<h3 class="anchored" data-anchor-id="app-data-pipeline">App Data Pipeline</h3>
+<p>The 2026 app uses a separate data pipeline from the model development scripts. Model development used lower-order ngrams (unigrams through quadgrams) but found that pentagrams alone, with the windowed backoff search across all five positions, provided sufficient coverage without the overhead of maintaining multiple lookup tables, which slowed UX response and exceeded Shiny file size allowances.</p>
+<p>The cleaned corpus was subsampled at five levels — 30%, 40%, 50%, 60%, and 70% — stratified by source to preserve representation across blogs, news, and Twitter. Each sample was used to generate a pentagram file to test the relationship between corpus size, ngram coverage, and file size. Pentagrams were filtered to a minimum count of 5 occurrences, trimmed to 80% cumulative coverage, and split into five word columns (word1–word5). Each word was then validated against a hunspell English dictionary to remove non-English tokens. The resulting file was indexed for fast lookup.</p>
+<p>Due to the small pentagram file size, the full corpus was also tested. After applying frequency and coverage filters, the resulting pentagram file for the full corpus was the same size as the 70% sample, suggesting the filters effectively cap the vocabulary regardless of corpus size. The 70% sample was selected as the final corpus, yielding approximately 157,500 pentagram rows at 3.2MB — small enough for fast Shiny loading while capturing effectively full corpus coverage.</p>
 </section>
 <section id="testing-model-accuracy-2026" class="level3">
 <h3 class="anchored" data-anchor-id="testing-model-accuracy-2026">Testing Model Accuracy 2026</h3>
@@ -275,7 +256,7 @@ ul.task-list li input[type="checkbox"] {
 <p>The accuracy testing methods in 2021 were for exact prediction. In 2026, top-10 and POS were used. The values do not reflect genuine gain in model performance.</p>
 </div>
 </div>
-<p>Three tidytext variants were tested — MLE backoff, Stupid Backoff, and interpolated backoff — alongside the quanteda, text2vec, and word2vec implementations. Accuracy was evaluated using two measures: top-10 prediction accuracy and POS to assess whether the top-1 predicted word matched the part-of-speech of the target word via udpipe. <strong>Table 2</strong> summarizes accuracy across all models. All three tidytext models dominate on both metrics. Stupid Backoff ranks highest on top-10 accuracy and is tied with MLE for POS accuracy – but POS accuracy tended to be above 50% in all models except Quanteda Kneser-New. Kneser-Ney’s POS accuracy (37.3%) notably exceeds its top-10 accuracy (9%), indicating it predicts the right kind of word even when missing the exact word. <strong>Tidytext Stupid Backoff is confirmed as the final model</strong> — consistent with the original 2021 finding</p>
+<p>Three tidytext variants were tested — MLE backoff, Stupid Backoff, and interpolated backoff — alongside the quanteda, text2vec, and word2vec implementations. Accuracy was evaluated using two measures: top-10 prediction accuracy and POS to assess whether the top-1 predicted word matched the part-of-speech of the target word via udpipe. <strong>Table 2</strong> summarizes accuracy across all models. All three tidytext models dominate on both metrics. Stupid Backoff ranks highest on top-10 accuracy and is tied with MLE for POS accuracy — but POS accuracy tended to be above 50% in all models except Quanteda Kneser-Ney. Kneser-Ney’s POS accuracy (37.3%) notably exceeds its top-10 accuracy (9%), indicating it predicts the right kind of word even when missing the exact word. <strong>Tidytext Stupid Backoff is confirmed as the final model</strong> — consistent with the original 2021 finding.</p>
 <p><strong>Table 2. Model Accuracy — Ranked by Top-10 Values</strong></p>
 <table class="caption-top table">
 <thead>
@@ -332,10 +313,11 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="project-resources">Project Resources</h2>
 <p><strong>Repository:</strong> <a href="https://github.com/kchoover14/nlp-next-word-prediction">kchoover14/nlp-next-word-prediction</a></p>
 <p><strong>Live App:</strong> <a href="https://kchoover14.shinyapps.io/NextWord/">Next Word Prediction App</a></p>
-<p><strong>Data :</strong></p>
+<p><strong>Data:</strong></p>
 <ul>
-<li><code>app/tidytext-*.csv</code> – n-gram lookup tables used by the deployed Shiny app</li>
-<li><code>app/app.R</code> – updated Shiny app with bslib theming, backoff chain table, mako color palette</li>
+<li><code>data/corpus-sample*.csv</code> – stratified corpus samples at 30%, 40%, 50%, 60%, 70% used for app development</li>
+<li><code>data/corpus-train.rds</code> and <code>data/corpus-test.rds</code> – 50% train and 10% test splits used for model accuracy testing</li>
+<li><code>app/pentagrams.csv</code> – final 70% pentagram lookup table used by the deployed app</li>
 </ul>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
@@ -351,13 +333,18 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 <p><strong>Code:</strong></p>
-<p><em>Prep scripts – run before corresponding model scripts. All current scripts use stop words retained and 90/10 train/test split at line level:</em></p>
+<p><em>App data pipeline — run in order:</em></p>
 <ul>
-<li><code>prep-corpus-sample.R</code> – corpus sampling and cleaning pipeline</li>
+<li><code>prep-app-corpus.R</code> – corpus cleaning and stratified sampling pipeline (30%–70%)</li>
+<li><code>prep-app-ngrams.R</code> – pentagram generation, filtering, hunspell validation, and indexing</li>
+</ul>
+<p><em>Model development prep scripts — run before corresponding model scripts. All use stop words retained and 50/10 train/test split at line level:</em></p>
+<ul>
+<li><code>scripts/prep-corpus-sample.R</code> – corpus sampling and cleaning pipeline</li>
 <li><code>scripts/prep-r1-tidytext.R</code> – tidytext corpus pipeline</li>
 <li><code>scripts/prep-r1-quanteda.R</code> – quanteda corpus pipeline</li>
 </ul>
-<p><em>Model scripts – r1 (current):</em></p>
+<p><em>Model scripts — r1 (current):</em></p>
 <ul>
 <li><code>scripts/model-r1-tidytext-stupid.R</code> – Stupid Backoff; top-10 and POS accuracy on r1 test data</li>
 <li><code>scripts/model-r1-tidytext-mle.R</code> – MLE backoff; top-10 and POS accuracy on r1 test data</li>
@@ -365,7 +352,7 @@ ul.task-list li input[type="checkbox"] {
 <li><code>scripts/model-r1-quanteda-mle.R</code> – quanteda MLE backoff; top-10 and POS accuracy on r1 test data</li>
 <li><code>scripts/model-r1-quanteda-good-turing.R</code> – Good-Turing + Katz backoff; top-10 and POS accuracy on r1 test data</li>
 <li><code>scripts/model-r1-quanteda-kneser-ney.R</code> – Kneser-Ney smoothing; top-10 and POS accuracy on r1 test data</li>
-<li>app.R – app script</li>
+<li><code>app/app.R</code> – deployed Shiny app</li>
 </ul>
 <p><strong>Project Artifacts:</strong></p>
 <p><em>2021 original app and data:</em></p>
@@ -393,13 +380,13 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="tools-technologies">Tools &amp; Technologies</h2>
 <p><strong>Languages:</strong> R</p>
 <p><strong>Tools:</strong> Shiny | shinyapps.io</p>
-<p><strong>Packages:</strong> shiny | shinycssloaders | bslib | stringr | dplyr | tidyr | data.table | kableExtra | tidytext | quanteda | lexicon | viridis | udpipe</p>
+<p><strong>Packages:</strong> shiny | shinycssloaders | bslib | stringr | dplyr | tidyr | data.table | tidytext | quanteda | lexicon | hunspell | viridis | udpipe</p>
 <hr>
 </section>
 <section id="expertise" class="level2">
 <h2 class="anchored" data-anchor-id="expertise">Expertise</h2>
 <p><strong>Domain Expertise:</strong> natural language processing | n-gram language models | text mining | corpus linguistics | predictive modeling | interactive tool development</p>
-<p><strong>Transferable Expertise:</strong> Demonstrates ability to systematically explore and evaluate competing methodological approaches, document iterative development transparently, and deploy a working NLP application from a messy real-world corpus – skills directly applicable to any data pipeline or applied ML project requiring both technical rigor and honest documentation of what worked and what did not.</p>
+<p><strong>Transferable Expertise:</strong> Demonstrates ability to systematically explore and evaluate competing methodological approaches, document iterative development transparently, and deploy a working NLP application from a messy real-world corpus — skills directly applicable to any data pipeline or applied ML project requiring both technical rigor and honest documentation of what worked and what did not.</p>
 </section>
 
 </main>
